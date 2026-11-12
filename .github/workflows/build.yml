@@ -1,0 +1,33 @@
+name: Build PermCheck APK
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Unzip project
+        id: loc
+        run: |
+          mkdir -p _proj
+          unzip -q "$(ls *.zip | head -n1)" -d _proj
+          d=$(dirname "$(find _proj -name settings.gradle.kts | head -n1)")
+          echo "dir=$d" >> "$GITHUB_OUTPUT"
+      - name: Build release APK
+        working-directory: ${{ steps.loc.outputs.dir }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon assembleRelease
+      - name: Collect APK
+        run: |
+          mkdir -p out
+          cp "$(find ${{ steps.loc.outputs.dir }} -path '*outputs/apk/release/*.apk' | head -n1)" out/PermCheck.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PermCheck-apk
+          path: out/PermCheck.apk
